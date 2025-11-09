@@ -1,0 +1,251 @@
+FCFS 
+ 
+#include <iostream> 
+using namespace std; 
+ 
+struct Process { 
+    int pid;  // Process ID 
+    int at;   // Arrival Time 
+    int bt;   // Burst Time 
+    int ct;   // Completion Time 
+    int tat;  // Turnaround Time 
+    int wt;   // Waiting Time 
+}; 
+ 
+// Function to sort processes by Arrival Time 
+void sortByArrival(Process p[], int n) { 
+    for (int i = 0; i < n - 1; i++) { 
+        for (int j = i + 1; j < n; j++) { 
+            if (p[i].at > p[j].at) { 
+                Process temp = p[i]; 
+                p[i] = p[j]; 
+                p[j] = temp; 
+            } 
+        } 
+    } 
+} 
+ 
+// Function to calculate Completion, Turnaround, and Waiting Times 
+void calculateTimes(Process p[], int n) { 
+    p[0].ct = p[0].at + p[0].bt; 
+    p[0].tat = p[0].ct - p[0].at; 
+    p[0].wt = p[0].tat - p[0].bt; 
+ 
+    for (int i = 1; i < n; i++) { 
+        if (p[i].at > p[i - 1].ct) 
+            p[i].ct = p[i].at + p[i].bt;  // CPU idle 
+        else 
+            p[i].ct = p[i - 1].ct + p[i].bt; 
+ 
+        p[i].tat = p[i].ct - p[i].at; 
+        p[i].wt = p[i].tat - p[i].bt; 
+    } 
+} 
+ 
+// Function to display the Gantt Chart (simple version) 
+void displayGanttChart(Process p[], int n) { 
+    cout << "\nGantt Chart:\n"; 
+    for (int i = 0; i < n; i++) { 
+        cout << "| P" << p[i].pid << " "; 
+    } 
+    cout << "|\n"; 
+ 
+    cout << p[0].at; 
+    for (int i = 0; i < n; i++) { 
+        cout << "   " << p[i].ct; 
+    } 
+    cout << "\n"; 
+} 
+ 
+// Function to display results and averages 
+void displayResults(Process p[], int n) { 
+    float totalTAT = 0, totalWT = 0; 
+ 
+    cout << "\nID\tAT\tBT\tCT\tTAT\tWT\n"; 
+    for (int i = 0; i < n; i++) { 
+        cout << "P" << p[i].pid << "\t" << p[i].at << "\t" << p[i].bt 
+             << "\t" << p[i].ct << "\t" << p[i].tat << "\t" << p[i].wt << "\n"; 
+ 
+        totalTAT += p[i].tat; 
+        totalWT += p[i].wt; 
+    } 
+ 
+    cout << "\nAverage Turnaround Time = " << totalTAT / n; 
+    cout << "\nAverage Waiting Time = " << totalWT / n << endl; 
+ 
+    displayGanttChart(p, n); 
+} 
+ 
+int main() { 
+    int n; 
+    cout << "Enter the number of processes: "; 
+    cin >> n; 
+ 
+    Process p[n]; 
+    for (int i = 0; i < n; i++) { 
+        cout << "Enter Arrival Time and Burst Time for Process " << i + 1 << ": "; 
+        cin >> p[i].at >> p[i].bt; 
+        p[i].pid = i + 1; 
+    } 
+ 
+    sortByArrival(p, n); 
+    calculateTimes(p, n); 
+    displayResults(p, n); 
+ 
+    return 0; 
+} 
+ 
+ 
+Round Robin 
+ 
+#include <iostream> 
+#include <queue> 
+#include <iomanip> 
+using namespace std; 
+ 
+struct Process { 
+    int pid;   // Process ID 
+    int at;    // Arrival Time 
+    int bt;    // Burst Time 
+    int ct;    // Completion Time 
+    int tat;   // Turnaround Time 
+    int wt;    // Waiting Time 
+    int rt;    // Remaining Time 
+}; 
+ 
+struct Slot { 
+    int pid; 
+    int start; 
+    int end; 
+}; 
+ 
+// Round Robin Scheduling 
+int roundRobin(Process proc[], int n, int tq, Slot slots[]) { 
+    queue<int> q; 
+    int time = 0, completed = 0, k = 0; 
+    bool inQueue[n] = {false}; 
+ 
+    for (int i = 0; i < n; i++) proc[i].rt = proc[i].bt; 
+ 
+    // Find the earliest arrival time 
+    int minArrival = proc[0].at; 
+    for (int i = 1; i < n; i++) 
+        if (proc[i].at < minArrival) 
+            minArrival = proc[i].at; 
+    time = minArrival;  // start from first arrival (no idle) 
+ 
+    while (completed < n) { 
+        // Add all arrived processes 
+        for (int i = 0; i < n; i++) { 
+            if (!inQueue[i] && proc[i].at <= time && proc[i].rt > 0) { 
+                q.push(i); 
+                inQueue[i] = true; 
+            } 
+        } 
+ 
+        if (q.empty()) { 
+            // jump to the next arrival (no idle slot) 
+            int nextArrival = INT_MAX; 
+            for (int i = 0; i < n; i++) { 
+                if (proc[i].rt > 0 && proc[i].at > time) 
+                    nextArrival = min(nextArrival, proc[i].at); 
+            } 
+            time = nextArrival; 
+            continue; 
+        } 
+ 
+        int idx = q.front(); 
+        q.pop(); 
+ 
+        slots[k].pid = proc[idx].pid; 
+        slots[k].start = time; 
+ 
+        int execTime = min(tq, proc[idx].rt); 
+        proc[idx].rt -= execTime; 
+        time += execTime; 
+        slots[k].end = time; 
+ 
+        // Add new arrivals during execution 
+        for (int i = 0; i < n; i++) { 
+            if (!inQueue[i] && proc[i].at <= time && proc[i].rt > 0) { 
+                q.push(i); 
+                inQueue[i] = true; 
+            } 
+        } 
+ 
+        if (proc[idx].rt > 0) 
+            q.push(idx); 
+        else { 
+            proc[idx].ct = time; 
+            proc[idx].tat = proc[idx].ct - proc[idx].at; 
+            proc[idx].wt = proc[idx].tat - proc[idx].bt; 
+            completed++; 
+        } 
+ 
+        // Merge consecutive same slots 
+        if (k > 0 && slots[k].pid == slots[k - 1].pid) { 
+            slots[k - 1].end = slots[k].end; 
+            k--; 
+        } 
+ 
+        k++; 
+    } 
+ 
+    return k; 
+} 
+ 
+// Display process details 
+void display(Process proc[], int n) { 
+    float totalWT = 0, totalTAT = 0; 
+ 
+    cout << "\nProcess\tAT\tBT\tCT\tTAT\tWT\n"; 
+    for (int i = 0; i < n; i++) { 
+        cout << "P" << proc[i].pid << "\t" << proc[i].at << "\t" << proc[i].bt 
+             << "\t" << proc[i].ct << "\t" << proc[i].tat << "\t" << proc[i].wt << "\n"; 
+        totalWT += proc[i].wt; 
+        totalTAT += proc[i].tat; 
+    } 
+ 
+    cout << "\nAverage Turnaround Time = " << totalTAT / n; 
+    cout << "\nAverage Waiting Time = " << totalWT / n << endl; 
+} 
+ 
+// Basic Gantt Chart (No IDLE) 
+void showGantt(Slot slots[], int k) { 
+    cout << "\nGantt Chart (Round Robin):\n"; 
+ 
+    for (int i = 0; i < k; i++) { 
+        cout << "| P" << slots[i].pid << " "; 
+    } 
+    cout << "|\n"; 
+ 
+    cout << slots[0].start; 
+    for (int i = 0; i < k; i++) { 
+        cout << "   " << slots[i].end; 
+    } 
+    cout << "\n"; 
+} 
+ 
+int main() { 
+    int n, tq; 
+    cout << "Enter number of processes: "; 
+    cin >> n; 
+ 
+    Process proc[n]; 
+    for (int i = 0; i < n; i++) { 
+        cout << "Enter Arrival Time and Burst Time for Process " << i + 1 << ": "; 
+        cin >> proc[i].at >> proc[i].bt; 
+        proc[i].pid = i + 1; 
+    } 
+ 
+    cout << "Enter Time Quantum: "; 
+    cin >> tq; 
+ 
+    Slot slots[500]; 
+    int k = roundRobin(proc, n, tq, slots); 
+ 
+    display(proc, n); 
+    showGantt(slots, k); 
+ 
+    return 0; 
+}

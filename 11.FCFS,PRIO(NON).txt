@@ -1,0 +1,226 @@
+FCFS 
+#include <iostream> 
+using namespace std; 
+ 
+struct Process { 
+    int pid;  // Process ID 
+    int at;   // Arrival Time 
+    int bt;   // Burst Time 
+    int ct;   // Completion Time 
+    int tat;  // Turnaround Time 
+    int wt;   // Waiting Time 
+}; 
+ 
+// Function to sort processes by Arrival Time 
+void sortByArrival(Process p[], int n) { 
+    for (int i = 0; i < n - 1; i++) { 
+        for (int j = i + 1; j < n; j++) { 
+            if (p[i].at > p[j].at) { 
+                Process temp = p[i]; 
+                p[i] = p[j]; 
+                p[j] = temp; 
+            } 
+        } 
+    } 
+} 
+ 
+// Function to calculate Completion, Turnaround, and Waiting Times 
+void calculateTimes(Process p[], int n) { 
+    p[0].ct = p[0].at + p[0].bt; 
+    p[0].tat = p[0].ct - p[0].at; 
+    p[0].wt = p[0].tat - p[0].bt; 
+ 
+    for (int i = 1; i < n; i++) { 
+        if (p[i].at > p[i - 1].ct) 
+            p[i].ct = p[i].at + p[i].bt;  // CPU idle 
+        else 
+            p[i].ct = p[i - 1].ct + p[i].bt; 
+ 
+        p[i].tat = p[i].ct - p[i].at; 
+        p[i].wt = p[i].tat - p[i].bt; 
+    } 
+} 
+ 
+// Function to display the Gantt Chart (simple version) 
+void displayGanttChart(Process p[], int n) { 
+    cout << "\nGantt Chart:\n"; 
+    for (int i = 0; i < n; i++) { 
+        cout << "| P" << p[i].pid << " "; 
+    } 
+    cout << "|\n"; 
+ 
+    cout << p[0].at; 
+    for (int i = 0; i < n; i++) { 
+        cout << "   " << p[i].ct; 
+    } 
+    cout << "\n"; 
+} 
+ 
+// Function to display results and averages 
+void displayResults(Process p[], int n) { 
+    float totalTAT = 0, totalWT = 0; 
+ 
+    cout << "\nID\tAT\tBT\tCT\tTAT\tWT\n"; 
+    for (int i = 0; i < n; i++) { 
+        cout << "P" << p[i].pid << "\t" << p[i].at << "\t" << p[i].bt 
+             << "\t" << p[i].ct << "\t" << p[i].tat << "\t" << p[i].wt << "\n"; 
+ 
+        totalTAT += p[i].tat; 
+        totalWT += p[i].wt; 
+    } 
+ 
+    cout << "\nAverage Turnaround Time = " << totalTAT / n; 
+    cout << "\nAverage Waiting Time = " << totalWT / n << endl; 
+ 
+    displayGanttChart(p, n); 
+} 
+ 
+int main() { 
+    int n; 
+    cout << "Enter the number of processes: "; 
+    cin >> n; 
+ 
+    Process p[n]; 
+    for (int i = 0; i < n; i++) { 
+        cout << "Enter Arrival Time and Burst Time for Process " << i + 1 << ": "; 
+        cin >> p[i].at >> p[i].bt; 
+        p[i].pid = i + 1; 
+    } 
+ 
+    sortByArrival(p, n); 
+    calculateTimes(p, n); 
+    displayResults(p, n); 
+ 
+    return 0; 
+} 
+ 
+Priority ( Non Preemptive ) 
+#include <iostream> 
+#include <iomanip> 
+#include <climits> 
+using namespace std; 
+ 
+struct Process { 
+    int pid;   // Process ID 
+    int at;    // Arrival Time 
+    int bt;    // Burst Time 
+    int pr;    // Priority (lower number = higher priority) 
+    int ct;    // Completion Time 
+    int tat;   // Turnaround Time 
+    int wt;    // Waiting Time 
+    bool done; // Finished or not 
+}; 
+ 
+struct Slot { 
+    int pid; 
+    int start; 
+    int end; 
+}; 
+ 
+// Priority Scheduling (Non-Preemptive) 
+int priorityScheduling(Process proc[], int n, Slot slots[]) { 
+    int time = 0, completed = 0, k = 0; 
+ 
+    // Start from earliest arrival 
+    int firstArrival = proc[0].at; 
+    for (int i = 1; i < n; i++) 
+        if (proc[i].at < firstArrival) 
+            firstArrival = proc[i].at; 
+    time = firstArrival; 
+ 
+    while (completed < n) { 
+        int idx = -1, bestPr = INT_MAX; 
+ 
+        // Find highest priority among arrived processes 
+        for (int i = 0; i < n; i++) { 
+            if (!proc[i].done && proc[i].at <= time) { 
+                if (proc[i].pr < bestPr) { 
+                    bestPr = proc[i].pr; 
+                    idx = i; 
+                } else if (proc[i].pr == bestPr && proc[i].at < proc[idx].at) { 
+                    idx = i; 
+                } 
+            } 
+        } 
+ 
+        // If no process arrived yet, jump to next arrival (skip idle) 
+        if (idx == -1) { 
+            int nextArrival = INT_MAX; 
+            for (int i = 0; i < n; i++) 
+                if (!proc[i].done && proc[i].at > time) 
+                    nextArrival = min(nextArrival, proc[i].at); 
+            time = nextArrival; 
+            continue; 
+        } 
+ 
+        // Record in Gantt Chart 
+        slots[k].pid = proc[idx].pid; 
+        slots[k].start = time; 
+ 
+        time += proc[idx].bt; 
+        proc[idx].ct = time; 
+        proc[idx].tat = proc[idx].ct - proc[idx].at; 
+        proc[idx].wt = proc[idx].tat - proc[idx].bt; 
+        proc[idx].done = true; 
+ 
+        slots[k].end = time; 
+        k++; 
+        completed++; 
+    } 
+    return k; 
+} 
+ 
+// Display process table 
+void display(Process proc[], int n) { 
+    float totalWT = 0, totalTAT = 0; 
+ 
+    cout << "\nProcess\tAT\tBT\tPR\tCT\tTAT\tWT\n"; 
+    for (int i = 0; i < n; i++) { 
+        cout << "P" << proc[i].pid << "\t" << proc[i].at << "\t" 
+             << proc[i].bt << "\t" << proc[i].pr << "\t" 
+             << proc[i].ct << "\t" << proc[i].tat << "\t" << proc[i].wt << "\n"; 
+        totalWT += proc[i].wt; 
+        totalTAT += proc[i].tat; 
+    } 
+ 
+    cout << "\nAverage Turnaround Time = " << totalTAT / n; 
+    cout << "\nAverage Waiting Time = " << totalWT / n << endl; 
+} 
+ 
+// Simple Gantt Chart (no idle) 
+void printGanttChart(Slot slots[], int k) { 
+    cout << "\nGantt Chart (Priority Non-Preemptive):\n"; 
+ 
+    for (int i = 0; i < k; i++) { 
+        cout << "| P" << slots[i].pid << " "; 
+    } 
+    cout << "|\n"; 
+ 
+    cout << slots[0].start; 
+    for (int i = 0; i < k; i++) { 
+        cout << "   " << slots[i].end; 
+    } 
+    cout << "\n"; 
+} 
+ 
+int main() { 
+    int n; 
+    cout << "Enter number of processes: "; 
+    cin >> n; 
+ 
+    Process proc[n]; 
+    for (int i = 0; i < n; i++) { 
+        cout << "Enter Arrival Time, Burst Time, and Priority for Process " << i + 1 << ": "; 
+        cin >> proc[i].at >> proc[i].bt >> proc[i].pr; 
+        proc[i].pid = i + 1; 
+        proc[i].done = false; 
+    } 
+ 
+    Slot slots[200]; 
+    int k = priorityScheduling(proc, n, slots); 
+ 
+    display(proc, n); 
+    printGanttChart(slots, k); 
+ 
+return 0; 
+}

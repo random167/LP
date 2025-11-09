@@ -1,0 +1,115 @@
+roll=0 
+name="" 
+course="" 
+marks=0 
+ch=0 
+ 
+while [ $ch -ne 6 ] 
+do 
+  echo -e "\nStudent Database\n----------------" 
+  echo -e "1. Create Student Database" 
+  echo -e "2. View Student Database" 
+  echo -e "3. Insert a Record" 
+  echo -e "4. Delete a Record" 
+  echo -e "5. Modify a Record" 
+  echo -e "6. Exit" 
+  echo -e "\nEnter your choice:" 
+  read ch 
+ 
+  case $ch in 
+ 
+    1) 
+      # Create Database 
+      echo -e "\nEnter file name for student database:" 
+      read fname 
+      touch "$fname" 
+      echo -e "\nEnter number of student records to add:" 
+      read n 
+      i=$n 
+      while [ $i -gt 0 ] 
+      do 
+        echo -e "\nEnter Roll No:" 
+        read roll 
+        echo -e "Enter Student Name:" 
+        read name 
+        echo -e "Enter Course:" 
+        read course 
+        echo -e "Enter Marks:" 
+        read marks 
+        echo -e "$roll\t$name\t$course\t$marks" >> "$fname" 
+        echo -e "Record added successfully." 
+        i=$((i - 1)) 
+      done 
+      ;; 
+ 
+    2) 
+      # View Database 
+      if [ ! -f "$fname" ]; then 
+        echo "No database file found. Please create one first." 
+      else 
+        echo -e "\nRollNo\tName\tCourse\tMarks" 
+        cat "$fname" 
+      fi 
+      ;; 
+ 
+    3) 
+      # Insert Record 
+      echo -e "\nEnter Roll No:" 
+      read roll 
+      echo -e "Enter Student Name:" 
+      read name 
+      echo -e "Enter Course:" 
+      read course 
+      echo -e "Enter Marks:" 
+      read marks 
+      echo -e "$roll\t$name\t$course\t$marks" >> "$fname" 
+      echo -e "Record inserted successfully." 
+      ;; 
+ 
+    4) 
+      # Delete Record 
+      echo -e "\nEnter Roll No of record to delete:" 
+      read delroll 
+      if grep -w "$delroll" "$fname" > /dev/null 
+      then 
+        grep -v -w "$delroll" "$fname" > temp 
+        mv temp "$fname" 
+        echo -e "Record deleted successfully." 
+      else 
+        echo -e "Record not found." 
+      fi 
+      ;; 
+ 
+    5) 
+      # Modify Record 
+      echo -e "\nEnter Roll No of record to modify:" 
+      read roll 
+      if grep -w "$roll" "$fname" > /dev/null 
+      then 
+        grep -v -w "$roll" "$fname" > temp 
+        echo -e "Enter new Roll No:" 
+        read roll 
+        echo -e "Enter new Student Name:" 
+        read name 
+        echo -e "Enter new Course:" 
+        read course 
+        echo -e "Enter new Marks:" 
+        read marks 
+        echo -e "$roll\t$name\t$course\t$marks" >> temp 
+        mv temp "$fname" 
+        echo -e "Record modified successfully." 
+      else 
+        echo -e "Record not found." 
+      fi 
+      ;; 
+ 
+    6) 
+      echo -e "\nExiting from program..." 
+      exit 0 
+      ;; 
+ 
+*) 
+echo -e "Invalid choice. Please enter a number between 1 and 6." 
+;; 
+esac 
+done
